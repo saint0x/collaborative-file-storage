@@ -1,0 +1,144 @@
+-- Users Table
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    avatar_url VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Friendships Table
+CREATE TABLE friendships (
+    id SERIAL PRIMARY KEY,
+    user_id_1 INTEGER REFERENCES users(id),
+    user_id_2 INTEGER REFERENCES users(id),
+    status VARCHAR(20) CHECK (status IN ('pending', 'accepted', 'blocked')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id_1, user_id_2)
+);
+
+-- Contexts Table
+CREATE TABLE contexts (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL
+);
+
+-- User_Contexts Table
+CREATE TABLE user_contexts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    context_id INTEGER REFERENCES contexts(id),
+    friendship_id INTEGER REFERENCES friendships(id),
+    UNIQUE(user_id, context_id, friendship_id)
+);
+
+-- File_Categories Table
+CREATE TABLE file_categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    icon VARCHAR(50) NOT NULL
+);
+
+-- Files Table
+CREATE TABLE files (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER REFERENCES users(id),
+    category_id INTEGER REFERENCES file_categories(id),
+    name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    file_size BIGINT NOT NULL,
+    mime_type VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    ai_processed BOOLEAN DEFAULT FALSE,
+    ai_confidence FLOAT
+);
+
+-- Shared_Files Table
+CREATE TABLE shared_files (
+    id SERIAL PRIMARY KEY,
+    file_id INTEGER REFERENCES files(id),
+    shared_by_id INTEGER REFERENCES users(id),
+    shared_with_id INTEGER REFERENCES users(id),
+    permissions VARCHAR(20) CHECK (permissions IN ('view', 'edit', 'full')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(file_id, shared_by_id, shared_with_id)
+);
+
+-- Comments Table
+CREATE TABLE comments (
+    id SERIAL PRIMARY KEY,
+    file_id INTEGER REFERENCES files(id),
+    user_id INTEGER REFERENCES users(id),
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Activities Table
+CREATE TABLE activities (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    activity_type VARCHAR(50) NOT NULL,
+    related_id INTEGER,
+    content TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- User_Settings Table
+CREATE TABLE user_settings (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) UNIQUE,
+    notification_preferences JSONB,
+    privacy_settings JSONB,
+    theme_preferences JSONB,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- AI Tags Table
+CREATE TABLE ai_tags (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL
+);
+
+-- File Tags Table
+CREATE TABLE file_tags (
+    id SERIAL PRIMARY KEY,
+    file_id INTEGER REFERENCES files(id),
+    tag_id INTEGER REFERENCES ai_tags(id),
+    confidence FLOAT NOT NULL,
+    UNIQUE(file_id, tag_id)
+);
+
+-- Smart Collections Table
+CREATE TABLE smart_collections (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    creator_id INTEGER REFERENCES users(id),
+    is_ai_generated BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Smart Collection Files Table
+CREATE TABLE smart_collection_files (
+    id SERIAL PRIMARY KEY,
+    collection_id INTEGER REFERENCES smart_collections(id),
+    file_id INTEGER REFERENCES files(id),
+    UNIQUE(collection_id, file_id)
+);
+
+-- AI Feedback Table
+CREATE TABLE ai_feedback (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    file_id INTEGER REFERENCES files(id),
+    feedback_type VARCHAR(20) CHECK (feedback_type IN ('thumbs_up', 'thumbs_down')),
+    ux_point VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
