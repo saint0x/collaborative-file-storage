@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Header from '@/components/Header'
 import FriendCard from '@/components/FriendCard'
+import UtilityButton from '@/components/UtilityButton'
 
 const friends = [
   {
@@ -175,6 +176,7 @@ export default function Home() {
           </Button>
         </div>
       </main>
+      <UtilityButton />
     </div>
   )
 }
