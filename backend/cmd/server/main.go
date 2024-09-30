@@ -7,9 +7,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/saint0x/file-storage-app/backend/internal/api"
 	"github.com/saint0x/file-storage-app/backend/internal/config"
 	"github.com/saint0x/file-storage-app/backend/internal/db"
-	"github.com/saint0x/file-storage-app/backend/internal/handlers"
+	"github.com/saint0x/file-storage-app/backend/internal/services/ai"
+	"github.com/saint0x/file-storage-app/backend/internal/services/auth"
+	"github.com/saint0x/file-storage-app/backend/internal/services/storage"
 	"github.com/saint0x/file-storage-app/backend/internal/services/websocket"
 )
 
@@ -32,12 +35,21 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
+	// Initialize services
+	authService, err := auth.NewClerkService()
+	if err != nil {
+		log.Fatalf("Failed to initialize Clerk service: %v", err)
+	}
+	storageService, err := storage.NewR2Service(cfg.R2AccountID, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.R2BucketName)
+	if err != nil {
+		log.Fatalf("Failed to initialize R2 service: %v", err)
+	}
+	wsHub := websocket.NewHub(database)
+	aiProcessor := ai.NewProcessor(cfg.OpenAIAPIKey)
+
 	// Set up routes
-	r.Get("/users", handlers.GetUsers(database))
-	r.Post("/users", handlers.CreateUser(database))
-	r.Get("/users/{id}", handlers.GetUser(database))
-	r.Put("/users/{id}", handlers.UpdateUser(database))
-	r.Delete("/users/{id}", handlers.DeleteUser(database))
+	handler := api.SetupRoutes(database, authService, storageService, wsHub, aiProcessor)
+	r.Mount("/", handler)
 
 	// Start server
 	port := os.Getenv("PORT")
@@ -50,6 +62,5 @@ func main() {
 	}
 
 	// Initialize WebSocket hub
-	hub := websocket.NewHub()
-	go hub.Run()
+	go wsHub.Run()
 }

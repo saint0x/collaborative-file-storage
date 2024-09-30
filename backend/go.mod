@@ -10,18 +10,15 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.37
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.63.3
 	github.com/go-chi/chi/v5 v5.0.10
-	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/rs/cors v1.11.1
 )
 
-require (
-	github.com/clerkinc/clerk-sdk-go v1.49.1 // indirect
-	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
-	golang.org/x/crypto v0.27.0 // indirect
-)
+require github.com/sashabaranov/go-openai v1.31.0
+
+require gopkg.in/yaml.v2 v2.4.0 // indirect
 
 require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.5 // indirect

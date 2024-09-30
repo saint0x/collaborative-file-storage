@@ -9,6 +9,7 @@ import (
 	"github.com/saint0x/file-storage-app/backend/internal/api/handlers"
 	apimiddleware "github.com/saint0x/file-storage-app/backend/internal/api/middleware"
 	"github.com/saint0x/file-storage-app/backend/internal/db"
+	"github.com/saint0x/file-storage-app/backend/internal/services/ai"
 	"github.com/saint0x/file-storage-app/backend/internal/services/auth"
 	"github.com/saint0x/file-storage-app/backend/internal/services/storage"
 	"github.com/saint0x/file-storage-app/backend/internal/services/websocket"
@@ -19,6 +20,7 @@ func SetupRoutes(
 	authService *auth.ClerkService,
 	storageService *storage.R2Service,
 	wsHub *websocket.Hub,
+	aiProcessor *ai.Processor,
 ) http.Handler {
 	r := chi.NewRouter()
 
@@ -81,6 +83,9 @@ func SetupRoutes(
 		r.Get("/ws", func(w http.ResponseWriter, r *http.Request) {
 			websocket.ServeWs(wsHub, w, r)
 		})
+
+		// Organize files route
+		r.Post("/organize-files", handlers.OrganizeFiles(db, aiProcessor))
 	})
 
 	return r

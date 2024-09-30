@@ -103,6 +103,10 @@ func (c *Client) writePump() {
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
+			// Record the ping in the database
+			if err := c.hub.recordPing(c.ID); err != nil {
+				log.Printf("Error recording ping: %v", err)
+			}
 		}
 	}
 }

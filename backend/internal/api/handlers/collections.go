@@ -29,8 +29,15 @@ func CreateCollection(db *db.SQLiteClient) http.HandlerFunc {
 			return
 		}
 
+		// Convert userID string to uuid.UUID
+		userUUID, err := uuid.Parse(userID)
+		if err != nil {
+			utils.RespondError(w, errors.InternalServerError("Invalid user ID format"))
+			return
+		}
+
 		collection.ID = uuid.New()
-		collection.UserID = userID
+		collection.UserID = userUUID
 		collection.CreatedAt = time.Now()
 		collection.UpdatedAt = time.Now()
 
@@ -53,7 +60,13 @@ func GetCollections(db *db.SQLiteClient) http.HandlerFunc {
 			return
 		}
 
-		rows, err := db.DB.Query("SELECT * FROM collections WHERE user_id = ?", userID)
+		userUUID, err := uuid.Parse(userID)
+		if err != nil {
+			utils.RespondError(w, errors.InternalServerError("Invalid user ID format"))
+			return
+		}
+
+		rows, err := db.DB.Query("SELECT * FROM collections WHERE user_id = ?", userUUID)
 		if err != nil {
 			utils.RespondError(w, errors.InternalServerError("Failed to fetch collections"))
 			return
@@ -82,7 +95,19 @@ func UpdateCollection(db *db.SQLiteClient) http.HandlerFunc {
 			utils.RespondError(w, errors.Unauthorized("User not authenticated"))
 			return
 		}
+
+		userUUID, err := uuid.Parse(userID)
+		if err != nil {
+			utils.RespondError(w, errors.InternalServerError("Invalid user ID format"))
+			return
+		}
+
 		collectionID := chi.URLParam(r, "id")
+		collectionUUID, err := uuid.Parse(collectionID)
+		if err != nil {
+			utils.RespondError(w, errors.BadRequest("Invalid collection ID"))
+			return
+		}
 
 		var updateData models.Collection
 		err = json.NewDecoder(r.Body).Decode(&updateData)
@@ -92,7 +117,7 @@ func UpdateCollection(db *db.SQLiteClient) http.HandlerFunc {
 		}
 
 		_, err = db.DB.Exec("UPDATE collections SET name = ?, description = ?, updated_at = ? WHERE id = ? AND user_id = ?",
-			updateData.Name, updateData.Description, time.Now(), collectionID, userID)
+			updateData.Name, updateData.Description, time.Now(), collectionUUID, userUUID)
 		if err != nil {
 			utils.RespondError(w, errors.InternalServerError("Failed to update collection"))
 			return
@@ -109,9 +134,21 @@ func DeleteCollection(db *db.SQLiteClient) http.HandlerFunc {
 			utils.RespondError(w, errors.Unauthorized("User not authenticated"))
 			return
 		}
-		collectionID := chi.URLParam(r, "id")
 
-		_, err = db.DB.Exec("DELETE FROM collections WHERE id = ? AND user_id = ?", collectionID, userID)
+		userUUID, err := uuid.Parse(userID)
+		if err != nil {
+			utils.RespondError(w, errors.InternalServerError("Invalid user ID format"))
+			return
+		}
+
+		collectionID := chi.URLParam(r, "id")
+		collectionUUID, err := uuid.Parse(collectionID)
+		if err != nil {
+			utils.RespondError(w, errors.BadRequest("Invalid collection ID"))
+			return
+		}
+
+		_, err = db.DB.Exec("DELETE FROM collections WHERE id = ? AND user_id = ?", collectionUUID, userUUID)
 		if err != nil {
 			utils.RespondError(w, errors.InternalServerError("Failed to delete collection"))
 			return

@@ -4,8 +4,30 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 )
+
+type ClerkService struct {
+	SecretKey string
+}
+
+func NewClerkService() (*ClerkService, error) {
+	secretKey := os.Getenv("CLERK_SECRET_KEY")
+	if secretKey == "" {
+		return nil, errors.New("CLERK_SECRET_KEY is not set")
+	}
+	return &ClerkService{SecretKey: secretKey}, nil
+}
+
+func (cs *ClerkService) ValidateAndExtractUserID(ctx context.Context, token string) (string, error) {
+	// TODO: Implement actual token validation using Clerk API
+	// This is a placeholder implementation
+	if token == "valid_token" {
+		return "user_123", nil
+	}
+	return "", errors.New("invalid token")
+}
 
 type ContextKey string
 
@@ -72,5 +94,3 @@ func AuthMiddleware(clerkService *ClerkService) func(http.Handler) http.Handler 
 		})
 	}
 }
-
-// Other auth-related functions...

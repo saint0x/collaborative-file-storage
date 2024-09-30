@@ -2,6 +2,11 @@ package websocket
 
 import (
 	"sync"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/saint0x/file-storage-app/backend/internal/db"
+	"github.com/saint0x/file-storage-app/backend/internal/models"
 )
 
 // UpdateType represents different types of updates that can be sent
@@ -39,15 +44,19 @@ type Hub struct {
 
 	// Mutex for thread-safe operations on the clients map
 	mu sync.RWMutex
+
+	// SQLite client for database operations
+	db *db.SQLiteClient
 }
 
 // NewHub creates a new Hub instance
-func NewHub() *Hub {
+func NewHub(db *db.SQLiteClient) *Hub {
 	return &Hub{
 		broadcast:  make(chan Update),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
+		db:         db,
 	}
 }
 
@@ -106,4 +115,17 @@ func (h *Hub) SendUpdateToClient(client *Client, updateType UpdateType, data int
 		delete(h.clients, client)
 		h.mu.Unlock()
 	}
+}
+
+// recordPing records a ping in the SQLite database
+func (h *Hub) recordPing(clientID string) error {
+	ping := models.Ping{
+		ID:        uuid.New(),
+		ClientID:  clientID,
+		Timestamp: time.Now(),
+	}
+
+	_, err := h.db.DB.Exec("INSERT INTO pings (id, client_id, timestamp) VALUES (?, ?, ?)",
+		ping.ID, ping.ClientID, ping.Timestamp)
+	return err
 }

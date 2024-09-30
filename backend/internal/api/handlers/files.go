@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"time"
@@ -38,19 +39,26 @@ func UploadFile(db *db.SQLiteClient, storageService *storage.R2Service) http.Han
 			return
 		}
 
+		userUUID, err := uuid.Parse(userID)
+		if err != nil {
+			utils.RespondError(w, errors.InternalServerError("Invalid user ID"))
+			return
+		}
+
 		newFile := models.File{
 			ID:          uuid.New(),
-			UserID:      userID,
+			UserID:      userUUID,
 			Key:         key,
 			Name:        header.Filename,
 			Size:        header.Size,
 			ContentType: header.Header.Get("Content-Type"),
 			UploadedAt:  time.Now(),
+			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 		}
 
-		_, err = db.DB.Exec("INSERT INTO files (id, user_id, key, name, size, content_type, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-			newFile.ID, newFile.UserID, newFile.Key, newFile.Name, newFile.Size, newFile.ContentType, newFile.UploadedAt, newFile.UpdatedAt)
+		_, err = db.DB.Exec("INSERT INTO files (id, user_id, key, name, size, content_type, uploaded_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			newFile.ID, newFile.UserID, newFile.Key, newFile.Name, newFile.Size, newFile.ContentType, newFile.UploadedAt, newFile.CreatedAt, newFile.UpdatedAt)
 		if err != nil {
 			utils.RespondError(w, errors.InternalServerError("Failed to save file metadata"))
 			return
@@ -84,10 +92,15 @@ func GetFiles(db *db.SQLiteClient) http.HandlerFunc {
 		var files []models.File
 		for rows.Next() {
 			var f models.File
-			err := rows.Scan(&f.ID, &f.UserID, &f.CollectionID, &f.Key, &f.Name, &f.Size, &f.ContentType, &f.UploadedAt, &f.UpdatedAt)
+			var collectionID sql.NullString
+			err := rows.Scan(&f.ID, &f.UserID, &collectionID, &f.Key, &f.Name, &f.Size, &f.ContentType, &f.UploadedAt, &f.CreatedAt, &f.UpdatedAt)
 			if err != nil {
 				utils.RespondError(w, errors.InternalServerError("Failed to scan file"))
 				return
+			}
+			if collectionID.Valid {
+				collUUID, _ := uuid.Parse(collectionID.String)
+				f.CollectionID = &collUUID
 			}
 			files = append(files, f)
 		}

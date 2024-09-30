@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -18,16 +17,7 @@ type R2Service struct {
 	bucketName string
 }
 
-func NewR2Service() (*R2Service, error) {
-	accountID := os.Getenv("CLOUDFLARE_ACCOUNT_ID")
-	accessKeyID := os.Getenv("CLOUDFLARE_ACCESS_KEY_ID")
-	secretAccessKey := os.Getenv("CLOUDFLARE_SECRET_ACCESS_KEY")
-	bucketName := os.Getenv("CLOUDFLARE_R2_BUCKET_NAME")
-
-	if accountID == "" || accessKeyID == "" || secretAccessKey == "" || bucketName == "" {
-		return nil, fmt.Errorf("missing required Cloudflare R2 environment variables")
-	}
-
+func NewR2Service(accountID, accessKeyID, secretAccessKey, bucketName string) (*R2Service, error) {
 	r2Resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 		return aws.Endpoint{
 			URL: fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountID),
@@ -40,7 +30,7 @@ func NewR2Service() (*R2Service, error) {
 		config.WithRegion("auto"),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load AWS SDK config: %v", err)
+		return nil, fmt.Errorf("failed to load R2 configuration: %v", err)
 	}
 
 	client := s3.NewFromConfig(cfg)
