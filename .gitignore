@@ -34,3 +34,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# database
+/Users/saint/Desktop/file-storage-app/backend/database.sqlite
