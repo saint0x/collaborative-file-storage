@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/yourusername/yourproject/internal/config"
-	"github.com/yourusername/yourproject/internal/db"
-	"github.com/yourusername/yourproject/internal/handlers"
+	"github.com/saint0x/file-storage-app/internal/config"
+	"github.com/saint0x/file-storage-app/internal/db"
+	"github.com/saint0x/file-storage-app/internal/handlers"
 )
 
 func main() {
