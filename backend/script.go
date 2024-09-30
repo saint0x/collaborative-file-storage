@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/saint0x/file-storage-app/internal/config"
-	"github.com/saint0x/file-storage-app/internal/db"
-	"github.com/saint0x/file-storage-app/internal/handlers"
+	"github.com/saint0x/file-storage-app/backend/internal/config"
+	"github.com/saint0x/file-storage-app/backend/internal/db"
+	"github.com/saint0x/file-storage-app/backend/internal/handlers"
 )
 
 func main() {

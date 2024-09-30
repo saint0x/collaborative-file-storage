@@ -3,13 +3,13 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
-	"strings
+	"strings"
 )
 
 func InitSchema(db *sql.DB) error {
-	schemaSQL, err := ioutil.ReadFile(filepath.Join("internal", "db", "schema.sql"))
+	schemaSQL, err := os.ReadFile(filepath.Join("internal", "db", "schema.sql"))
 	if err != nil {
 		return fmt.Errorf("failed to read schema file: %v", err)
 	}

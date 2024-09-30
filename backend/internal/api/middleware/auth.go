@@ -3,25 +3,27 @@ package apimiddleware
 import (
 	"net/http"
 
-	"github.com/yourusername/yourproject/internal/services/auth"
+	"github.com/saint0x/file-storage-app/backend/internal/services/auth"
+	"github.com/saint0x/file-storage-app/backend/pkg/errors"
+	"github.com/saint0x/file-storage-app/backend/pkg/utils"
 )
 
-func Auth(authService *auth.ClerkService) func(http.Handler) http.Handler {
+func Auth(authService *auth.ClerkService) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			token := r.Header.Get("Authorization")
-			if token == "" {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-
-			userID, err := authService.ValidateToken(token)
+			token, err := auth.ExtractBearerToken(r)
 			if err != nil {
-				http.Error(w, "Invalid token", http.StatusUnauthorized)
+				utils.RespondError(w, errors.Unauthorized("Invalid or missing token"))
 				return
 			}
 
-			ctx := auth.SetUserIDContext(r.Context(), userID)
+			userID, err := authService.ValidateAndExtractUserID(r.Context(), token)
+			if err != nil {
+				utils.RespondError(w, errors.Unauthorized("Invalid token"))
+				return
+			}
+
+			ctx := auth.SetUserIDInContext(r.Context(), userID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

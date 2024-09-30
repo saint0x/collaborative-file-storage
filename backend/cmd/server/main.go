@@ -7,9 +7,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/yourusername/yourproject/internal/config"
-	"github.com/yourusername/yourproject/internal/db"
-	"github.com/yourusername/yourproject/internal/handlers"
+	"github.com/saint0x/file-storage-app/backend/internal/config"
+	"github.com/saint0x/file-storage-app/backend/internal/db"
+	"github.com/saint0x/file-storage-app/backend/internal/handlers"
+	"github.com/saint0x/file-storage-app/backend/internal/services/websocket"
 )
 
 func main() {
@@ -47,4 +48,8 @@ func main() {
 	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+
+	// Initialize WebSocket hub
+	hub := websocket.NewHub()
+	go hub.Run()
 }

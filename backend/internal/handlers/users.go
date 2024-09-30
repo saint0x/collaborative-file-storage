@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/yourusername/yourproject/internal/db"
+	"github.com/saint0x/file-storage-app/backend/internal/db"
 )
 
 type User struct {
