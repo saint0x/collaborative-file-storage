@@ -18,8 +18,6 @@ require (
 
 require github.com/sashabaranov/go-openai v1.31.0
 
-require gopkg.in/yaml.v2 v2.4.0 // indirect
-
 require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.5 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.14 // indirect
@@ -36,6 +34,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.31.3 // indirect
 	github.com/aws/smithy-go v1.21.0 // indirect
 	github.com/google/uuid v1.6.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 // Add any other necessary dependencies
