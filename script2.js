@@ -3,7 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
 
-console.log('🚀 Starting database population script...');
+console.log('🚀 Starting database population script:', new Date().toISOString());
 
 const dbPath = './backend/database.sqlite';
 const schemaPath = './backend/internal/db/schema.sql';
@@ -11,66 +11,46 @@ const schemaPath = './backend/internal/db/schema.sql';
 // Ensure the backend directory exists
 if (!fs.existsSync('./backend')) {
     fs.mkdirSync('./backend');
-    console.log('📁 Created backend directory');
+    console.log('📁 Created backend directory:', new Date().toISOString());
 }
 
 // Connect to the SQLite database (it will be created if it doesn't exist)
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
-        console.error('❌ Error connecting to the database:', err.message);
+        console.error('❌ Error connecting to the database:', err.message, new Date().toISOString());
         process.exit(1);
     } else {
-        console.log('✅ Connected to the SQLite database.');
+        console.log('✅ Connected to the SQLite database:', new Date().toISOString());
         initializeDatabase();
     }
 });
 
 function initializeDatabase() {
-    console.log('🏗️ Initializing database schema...');
-    const schemaSQL = fs.readFileSync(schemaPath, 'utf8');
+    console.log('🏗️ Checking database schema...', new Date().toISOString());
     
-    db.exec(schemaSQL, (err) => {
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='users'", (err, row) => {
         if (err) {
-            console.error('❌ Error initializing schema:', err.message);
+            console.error('❌ Error checking database schema:', err.message, new Date().toISOString());
             process.exit(1);
+        }
+        
+        if (row) {
+            console.log('✅ Database schema already exists. Skipping initialization.', new Date().toISOString());
+            populateSampleData();
         } else {
-            console.log('✅ Schema initialized successfully.');
-            runMigrations();
-        }
-    });
-}
-
-function runMigrations() {
-    console.log('🔄 Running migrations...');
-    const migrationsPath = './backend/internal/db/migrations';
-    
-    fs.readdir(migrationsPath, (err, files) => {
-        if (err) {
-            console.error('❌ Error reading migrations directory:', err.message);
-            process.exit(1);
-        }
-
-        const migrationFiles = files.filter(file => file.endsWith('.sql')).sort();
-
-        db.serialize(() => {
-            db.run('BEGIN TRANSACTION');
-
-            migrationFiles.forEach(file => {
-                const migrationSQL = fs.readFileSync(path.join(migrationsPath, file), 'utf8');
-                console.log(`Executing migration: ${file}`);
-                db.run(migrationSQL);
-            });
-
-            db.run('COMMIT', (err) => {
+            console.log('🏗️ Initializing database schema...', new Date().toISOString());
+            const schemaSQL = fs.readFileSync(schemaPath, 'utf8');
+            
+            db.exec(schemaSQL, (err) => {
                 if (err) {
-                    console.error('❌ Error committing migrations:', err.message);
-                    db.run('ROLLBACK');
+                    console.error('❌ Error initializing schema:', err.message, new Date().toISOString());
+                    process.exit(1);
                 } else {
-                    console.log('✅ Migrations completed successfully.');
+                    console.log('✅ Schema initialized successfully.', new Date().toISOString());
                     populateSampleData();
                 }
             });
-        });
+        }
     });
 }
 
@@ -171,16 +151,16 @@ function generateSampleData() {
 }
 
 function populateSampleData() {
-    console.log('🏁 Starting database population process...');
+    console.log('🏁 Starting database population process:', new Date().toISOString());
 
     const sampleData = generateSampleData();
 
     db.serialize(() => {
-        console.log('🔒 Beginning transaction...');
+        console.log('🔒 Beginning transaction:', new Date().toISOString());
         db.run('BEGIN TRANSACTION');
 
         // Insert users
-        console.log('👤 Inserting users...');
+        console.log('👤 Inserting users:', new Date().toISOString());
         const insertUser = db.prepare(`
             INSERT INTO users (id, email, username, first_name, last_name, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -188,16 +168,16 @@ function populateSampleData() {
         sampleData.users.forEach((user, index) => {
             insertUser.run(user.id, user.email, user.username, user.firstName, user.lastName, user.createdAt, user.updatedAt, (err) => {
                 if (err) {
-                    console.error(`❌ Error inserting user ${index + 1}:`, err.message);
+                    console.error(`❌ Error inserting user ${index + 1}:`, err.message, new Date().toISOString());
                 } else {
-                    console.log(`✅ User ${index + 1} inserted successfully.`);
+                    console.log(`✅ User ${index + 1} inserted successfully:`, JSON.stringify(user), new Date().toISOString());
                 }
             });
         });
         insertUser.finalize();
 
         // Insert friends
-        console.log('🤝 Inserting friends...');
+        console.log('🤝 Inserting friends:', new Date().toISOString());
         const insertFriend = db.prepare(`
             INSERT INTO friends (id, user_id, friend_id, status, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -205,16 +185,16 @@ function populateSampleData() {
         sampleData.friends.forEach((friend, index) => {
             insertFriend.run(friend.id, friend.userId, friend.friendId, friend.status, friend.createdAt, friend.updatedAt, (err) => {
                 if (err) {
-                    console.error(`❌ Error inserting friend ${index + 1}:`, err.message);
+                    console.error(`❌ Error inserting friend ${index + 1}:`, err.message, new Date().toISOString());
                 } else {
-                    console.log(`✅ Friend ${index + 1} inserted successfully.`);
+                    console.log(`✅ Friend ${index + 1} inserted successfully:`, JSON.stringify(friend), new Date().toISOString());
                 }
             });
         });
         insertFriend.finalize();
 
         // Insert friend contexts
-        console.log('🧩 Inserting friend contexts...');
+        console.log('🧩 Inserting friend contexts:', new Date().toISOString());
         const insertFriendContext = db.prepare(`
             INSERT INTO friend_contexts (id, user_id, friend_id, context, created_at)
             VALUES (?, ?, ?, ?, ?)
@@ -222,16 +202,16 @@ function populateSampleData() {
         sampleData.friendContexts.forEach((context, index) => {
             insertFriendContext.run(context.id, context.userId, context.friendId, context.context, context.createdAt, (err) => {
                 if (err) {
-                    console.error(`❌ Error inserting friend context ${index + 1}:`, err.message);
+                    console.error(`❌ Error inserting friend context ${index + 1}:`, err.message, new Date().toISOString());
                 } else {
-                    console.log(`✅ Friend context ${index + 1} inserted successfully.`);
+                    console.log(`✅ Friend context ${index + 1} inserted successfully:`, JSON.stringify(context), new Date().toISOString());
                 }
             });
         });
         insertFriendContext.finalize();
 
         // Insert friend likes
-        console.log('👍 Inserting friend likes...');
+        console.log('👍 Inserting friend likes:', new Date().toISOString());
         const insertFriendLike = db.prepare(`
             INSERT INTO friend_likes (id, user_id, friend_id, created_at)
             VALUES (?, ?, ?, ?)
@@ -239,16 +219,16 @@ function populateSampleData() {
         sampleData.friendLikes.forEach((like, index) => {
             insertFriendLike.run(like.id, like.userId, like.friendId, like.createdAt, (err) => {
                 if (err) {
-                    console.error(`❌ Error inserting friend like ${index + 1}:`, err.message);
+                    console.error(`❌ Error inserting friend like ${index + 1}:`, err.message, new Date().toISOString());
                 } else {
-                    console.log(`✅ Friend like ${index + 1} inserted successfully.`);
+                    console.log(`✅ Friend like ${index + 1} inserted successfully:`, JSON.stringify(like), new Date().toISOString());
                 }
             });
         });
         insertFriendLike.finalize();
 
         // Insert collections
-        console.log('📚 Inserting collections...');
+        console.log('📚 Inserting collections:', new Date().toISOString());
         const insertCollection = db.prepare(`
             INSERT INTO collections (id, user_id, name, description, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -256,16 +236,16 @@ function populateSampleData() {
         sampleData.collections.forEach((collection, index) => {
             insertCollection.run(collection.id, collection.userId, collection.name, collection.description, collection.createdAt, collection.updatedAt, (err) => {
                 if (err) {
-                    console.error(`❌ Error inserting collection ${index + 1}:`, err.message);
+                    console.error(`❌ Error inserting collection ${index + 1}:`, err.message, new Date().toISOString());
                 } else {
-                    console.log(`✅ Collection ${index + 1} inserted successfully.`);
+                    console.log(`✅ Collection ${index + 1} inserted successfully:`, JSON.stringify(collection), new Date().toISOString());
                 }
             });
         });
         insertCollection.finalize();
 
         // Insert folders
-        console.log('📂 Inserting folders...');
+        console.log('📂 Inserting folders:', new Date().toISOString());
         const insertFolder = db.prepare(`
             INSERT INTO folders (id, user_id, name, description, parent_id, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -273,16 +253,16 @@ function populateSampleData() {
         sampleData.folders.forEach((folder, index) => {
             insertFolder.run(folder.id, folder.userId, folder.name, folder.description, folder.parentId, folder.createdAt, folder.updatedAt, (err) => {
                 if (err) {
-                    console.error(`❌ Error inserting folder ${index + 1}:`, err.message);
+                    console.error(`❌ Error inserting folder ${index + 1}:`, err.message, new Date().toISOString());
                 } else {
-                    console.log(`✅ Folder ${index + 1} inserted successfully.`);
+                    console.log(`✅ Folder ${index + 1} inserted successfully:`, JSON.stringify(folder), new Date().toISOString());
                 }
             });
         });
         insertFolder.finalize();
 
         // Insert files
-        console.log('📄 Inserting files...');
+        console.log('📄 Inserting files:', new Date().toISOString());
         const insertFile = db.prepare(`
             INSERT INTO files (id, user_id, folder_id, collection_id, key, name, content_type, size, uploaded_at, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -290,9 +270,9 @@ function populateSampleData() {
         sampleData.files.forEach((file, index) => {
             insertFile.run(file.id, file.userId, file.folderId, file.collectionId, file.key, file.name, file.contentType, file.size, file.uploadedAt, file.createdAt, file.updatedAt, (err) => {
                 if (err) {
-                    console.error(`❌ Error inserting file ${index + 1}:`, err.message);
+                    console.error(`❌ Error inserting file ${index + 1}:`, err.message, new Date().toISOString());
                 } else {
-                    console.log(`✅ File ${index + 1} inserted successfully.`);
+                    console.log(`✅ File ${index + 1} inserted successfully:`, JSON.stringify(file), new Date().toISOString());
                     // Update fileCategoryAssociations and sharedFiles with the inserted file ID
                     sampleData.fileCategoryAssociations[0].fileId = file.id;
                     sampleData.sharedFiles[0].fileId = file.id;
@@ -302,7 +282,7 @@ function populateSampleData() {
         insertFile.finalize();
 
         // Insert file categories
-        console.log('🏷️ Inserting file categories...');
+        console.log('🏷️ Inserting file categories:', new Date().toISOString());
         const insertFileCategory = db.prepare(`
             INSERT INTO file_categories (id, name, created_at, updated_at)
             VALUES (?, ?, ?, ?)
@@ -310,9 +290,9 @@ function populateSampleData() {
         sampleData.fileCategories.forEach((category, index) => {
             insertFileCategory.run(category.id, category.name, category.createdAt, category.updatedAt, (err) => {
                 if (err) {
-                    console.error(`❌ Error inserting file category ${index + 1}:`, err.message);
+                    console.error(`❌ Error inserting file category ${index + 1}:`, err.message, new Date().toISOString());
                 } else {
-                    console.log(`✅ File category ${index + 1} inserted successfully.`);
+                    console.log(`✅ File category ${index + 1} inserted successfully:`, JSON.stringify(category), new Date().toISOString());
                     if (index === 0) {
                         // Update fileCategoryAssociations with the first category ID
                         sampleData.fileCategoryAssociations[0].categoryId = category.id;
@@ -323,7 +303,7 @@ function populateSampleData() {
         insertFileCategory.finalize();
 
         // Insert file category associations
-        console.log('🔗 Inserting file category associations...');
+        console.log('🔗 Inserting file category associations:', new Date().toISOString());
         const insertFileCategoryAssociation = db.prepare(`
             INSERT INTO file_category_associations (file_id, category_id)
             VALUES (?, ?)
@@ -331,16 +311,16 @@ function populateSampleData() {
         sampleData.fileCategoryAssociations.forEach((association, index) => {
             insertFileCategoryAssociation.run(association.fileId, association.categoryId, (err) => {
                 if (err) {
-                    console.error(`❌ Error inserting file category association ${index + 1}:`, err.message);
+                    console.error(`❌ Error inserting file category association ${index + 1}:`, err.message, new Date().toISOString());
                 } else {
-                    console.log(`✅ File category association ${index + 1} inserted successfully.`);
+                    console.log(`✅ File category association ${index + 1} inserted successfully:`, JSON.stringify(association), new Date().toISOString());
                 }
             });
         });
         insertFileCategoryAssociation.finalize();
 
         // Insert shared files
-        console.log('🔄 Inserting shared files...');
+        console.log('🔄 Inserting shared files:', new Date().toISOString());
         const insertSharedFile = db.prepare(`
             INSERT INTO shared_files (id, file_id, shared_by, shared_with, created_at)
             VALUES (?, ?, ?, ?, ?)
@@ -348,16 +328,16 @@ function populateSampleData() {
         sampleData.sharedFiles.forEach((sharedFile, index) => {
             insertSharedFile.run(sharedFile.id, sharedFile.fileId, sharedFile.sharedBy, sharedFile.sharedWith, sharedFile.createdAt, (err) => {
                 if (err) {
-                    console.error(`❌ Error inserting shared file ${index + 1}:`, err.message);
+                    console.error(`❌ Error inserting shared file ${index + 1}:`, err.message, new Date().toISOString());
                 } else {
-                    console.log(`✅ Shared file ${index + 1} inserted successfully.`);
+                    console.log(`✅ Shared file ${index + 1} inserted successfully:`, JSON.stringify(sharedFile), new Date().toISOString());
                 }
             });
         });
         insertSharedFile.finalize();
 
         // Insert activity log
-        console.log('📝 Inserting activity log...');
+        console.log('📝 Inserting activity log:', new Date().toISOString());
         const insertActivityLog = db.prepare(`
             INSERT INTO activity_log (id, user_id, action_type, action_details, created_at)
             VALUES (?, ?, ?, ?, ?)
@@ -365,31 +345,31 @@ function populateSampleData() {
         sampleData.activityLog.forEach((activity, index) => {
             insertActivityLog.run(activity.id, activity.userId, activity.actionType, activity.actionDetails, activity.createdAt, (err) => {
                 if (err) {
-                    console.error(`❌ Error inserting activity log ${index + 1}:`, err.message);
+                    console.error(`❌ Error inserting activity log ${index + 1}:`, err.message, new Date().toISOString());
                 } else {
-                    console.log(`✅ Activity log ${index + 1} inserted successfully.`);
+                    console.log(`✅ Activity log ${index + 1} inserted successfully:`, JSON.stringify(activity), new Date().toISOString());
                 }
             });
         });
         insertActivityLog.finalize();
 
         // Commit transaction
-        console.log('🔐 Committing transaction...');
+        console.log('🔐 Committing transaction:', new Date().toISOString());
         db.run('COMMIT', (err) => {
             if (err) {
-                console.error('❌ Error committing transaction:', err.message);
-                console.log('↩️ Rolling back changes...');
+                console.error('❌ Error committing transaction:', err.message, new Date().toISOString());
+                console.log('↩️ Rolling back changes:', new Date().toISOString());
                 db.run('ROLLBACK');
             } else {
-                console.log('✅ Transaction committed successfully.');
-                console.log('🎉 Database population complete!');
+                console.log('✅ Transaction committed successfully.', new Date().toISOString());
+                console.log('🎉 Database population complete!', new Date().toISOString());
             }
-            console.log('🔌 Closing database connection...');
+            console.log('🔌 Closing database connection:', new Date().toISOString());
             db.close((err) => {
                 if (err) {
-                    console.error('❌ Error closing database connection:', err.message);
+                    console.error('❌ Error closing database connection:', err.message, new Date().toISOString());
                 } else {
-                    console.log('👋 Database connection closed.');
+                    console.log('👋 Database connection closed.', new Date().toISOString());
                 }
             });
         });
@@ -398,7 +378,7 @@ function populateSampleData() {
 
 // Error handling for the database connection
 db.on('error', (err) => {
-    console.error('❌ Database error:', err.message);
+    console.error('❌ Database error:', err.message, new Date().toISOString());
 });
 
-console.log('📜 Script execution completed.');
+console.log('📜 Script execution completed:', new Date().toISOString());
