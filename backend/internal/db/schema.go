@@ -9,6 +9,11 @@ import (
 	"strings"
 )
 
+type File struct {
+	// ... existing fields
+	B2FileID string `db:"b2_file_id"`
+}
+
 func InitSchema(db *sql.DB) error {
 	// Check if the users table exists
 	var tableName string
@@ -28,6 +33,14 @@ func InitSchema(db *sql.DB) error {
 		} else {
 			return fmt.Errorf("failed to check if users table exists: %w", err)
 		}
+	}
+
+	// Add the b2_file_id column if it doesn't exist
+	_, err = db.Exec(`
+		ALTER TABLE files ADD COLUMN IF NOT EXISTS b2_file_id TEXT;
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to add b2_file_id column: %w", err)
 	}
 
 	// Run migrations

@@ -13,56 +13,53 @@ import (
 	"github.com/saint0x/file-storage-app/backend/internal/models"
 	"github.com/saint0x/file-storage-app/backend/internal/services/auth"
 	"github.com/saint0x/file-storage-app/backend/internal/services/storage"
-	"github.com/saint0x/file-storage-app/backend/internal/services/websocket"
 	"github.com/saint0x/file-storage-app/backend/pkg/errors"
 	"github.com/saint0x/file-storage-app/backend/pkg/utils"
 )
 
-func UploadFile(b2Service *storage.B2Service, wsHub *websocket.Hub, dbClient *db.SQLiteClient) http.HandlerFunc {
+func UploadFile(b2Service *storage.B2Service, dbClient *db.SQLiteClient) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, err := auth.GetUserIDFromContext(r.Context())
 		if err != nil {
-			utils.RespondError(w, errors.Unauthorized("User not authenticated"))
+			utils.RespondError(w, fmt.Errorf("unauthorized: %w", err))
 			return
 		}
 
 		file, header, err := r.FormFile("file")
 		if err != nil {
-			utils.RespondError(w, errors.BadRequest("Failed to get file from form"))
+			utils.RespondError(w, fmt.Errorf("failed to get file from form: %w", err))
 			return
 		}
 		defer file.Close()
 
-		key := fmt.Sprintf("%s_%d_%s", userID, time.Now().UnixNano(), header.Filename)
+		// Generate a unique key for the file
+		fileID := uuid.New().String()
+		key := fmt.Sprintf("%s/%s_%s", userID, fileID, header.Filename)
 
+		// Upload the file to B2
 		err = b2Service.UploadFile(r.Context(), key, file)
 		if err != nil {
-			utils.RespondError(w, errors.InternalServerError("Failed to upload file"))
+			utils.RespondError(w, fmt.Errorf("failed to upload file to B2: %w", err))
 			return
 		}
 
-		userUUID, err := uuid.Parse(userID)
-		if err != nil {
-			utils.RespondError(w, errors.InternalServerError("Invalid user ID"))
-			return
-		}
-
+		// Create a new File record
 		newFile := models.File{
-			ID:          uuid.New(),
-			UserID:      userUUID,
+			ID:          uuid.MustParse(fileID),
+			UserID:      uuid.MustParse(userID),
+			Key:         key,
 			Name:        header.Filename,
 			ContentType: header.Header.Get("Content-Type"),
-			Key:         key,
 			Size:        header.Size,
 			UploadedAt:  time.Now(),
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 		}
 
-		_, err = dbClient.DB.Exec("INSERT INTO files (id, user_id, key, name, size, content_type, uploaded_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-			newFile.ID, newFile.UserID, newFile.Key, newFile.Name, newFile.Size, newFile.ContentType, newFile.UploadedAt, newFile.CreatedAt, newFile.UpdatedAt)
+		// Save the file metadata to the database
+		err = dbClient.CreateFile(newFile)
 		if err != nil {
-			utils.RespondError(w, errors.InternalServerError("Failed to save file metadata"))
+			utils.RespondError(w, fmt.Errorf("failed to save file metadata: %w", err))
 			return
 		}
 
@@ -102,7 +99,7 @@ func GetFiles(db *db.SQLiteClient) http.HandlerFunc {
 			}
 			if collectionID.Valid {
 				collUUID, _ := uuid.Parse(collectionID.String)
-				f.CollectionID = collUUID
+				f.CollectionID = uuid.NullUUID{UUID: collUUID, Valid: true}
 			}
 			files = append(files, f)
 		}

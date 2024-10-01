@@ -6,15 +6,24 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
-	"time"
 )
 
 type ClerkService struct {
-	SecretKey  string
 	BaseURL    string
+	SecretKey  string
 	HTTPClient *http.Client
+}
+
+func NewClerkService() *ClerkService {
+	return &ClerkService{
+		BaseURL:    "https://api.clerk.dev/v1", // Replace with the correct Clerk API URL
+		HTTPClient: &http.Client{},
+	}
+}
+
+func (c *ClerkService) SetSecretKey(key string) {
+	c.SecretKey = key
 }
 
 type SessionClaims struct {
@@ -27,18 +36,6 @@ type ContextKey string
 const (
 	UserIDContextKey ContextKey = "user_id"
 )
-
-func NewClerkService() (*ClerkService, error) {
-	secretKey := os.Getenv("CLERK_SECRET_KEY")
-	if secretKey == "" {
-		return nil, fmt.Errorf("CLERK_SECRET_KEY is not set")
-	}
-	return &ClerkService{
-		SecretKey:  secretKey,
-		BaseURL:    "https://api.clerk.dev/v1",
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-	}, nil
-}
 
 func (cs *ClerkService) ValidateAndExtractUserID(ctx context.Context, token string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", cs.BaseURL+"/tokens/verify", nil)

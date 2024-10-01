@@ -363,3 +363,27 @@ func (c *SQLiteClient) GetRecentActivity(userID string) ([]Activity, error) {
 
 	return activities, nil
 }
+
+// Update the CreateFile function to include the b2_file_id
+func (c *SQLiteClient) CreateFile(file models.File) error {
+	_, err := c.DB.Exec(`
+		INSERT INTO files (id, user_id, folder_id, collection_id, key, name, content_type, size, uploaded_at, created_at, updated_at, b2_file_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, file.ID, file.UserID, file.FolderID, file.CollectionID, file.Key, file.Name, file.ContentType, file.Size, file.UploadedAt, file.CreatedAt, file.UpdatedAt, file.B2FileID)
+	return err
+}
+
+// Update the GetFileByID function to include the b2_file_id
+func (c *SQLiteClient) GetFileByID(id string) (models.File, error) {
+	var file models.File
+	err := c.DB.QueryRow(`
+		SELECT id, user_id, folder_id, collection_id, key, name, content_type, size, uploaded_at, created_at, updated_at, b2_file_id
+		FROM files WHERE id = ?
+	`, id).Scan(&file.ID, &file.UserID, &file.FolderID, &file.CollectionID, &file.Key, &file.Name, &file.ContentType, &file.Size, &file.UploadedAt, &file.CreatedAt, &file.UpdatedAt, &file.B2FileID)
+	if err != nil {
+		return models.File{}, err
+	}
+	return file, nil
+}
+
+// Update other relevant functions to include the b2_file_id field

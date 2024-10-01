@@ -9,14 +9,16 @@ import (
 type File struct {
 	ID           uuid.UUID
 	UserID       uuid.UUID
+	FolderID     uuid.NullUUID // Add this field
+	CollectionID uuid.NullUUID
+	Key          string
 	Name         string
 	ContentType  string
-	Key          string
 	Size         int64
 	UploadedAt   time.Time
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
-	CollectionID uuid.UUID
+	B2FileID     string // Add this field
 }
 
 type FileDetails struct {

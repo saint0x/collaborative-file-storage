@@ -84,6 +84,9 @@ CREATE TABLE IF NOT EXISTS files (
     FOREIGN KEY (collection_id) REFERENCES collections(id)
 );
 
+-- Add this line to the files table definition
+ALTER TABLE files ADD COLUMN b2_file_id TEXT;
+
 -- File Categories Table
 CREATE TABLE IF NOT EXISTS file_categories (
     id TEXT PRIMARY KEY,
