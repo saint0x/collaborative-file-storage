@@ -83,3 +83,9 @@ func formatFilesForPrompt(files []models.File) string {
 	}
 	return result
 }
+
+// Add this method to the Processor struct
+func (p *Processor) Close() error {
+	// Add any cleanup logic here
+	return nil
+}

@@ -332,3 +332,12 @@ func (s *B2Service) getFileInfo(ctx context.Context, key string) (*struct {
 
 	return &result, nil
 }
+
+// Add the Close method
+func (s *B2Service) Close() error {
+	// Perform any necessary cleanup
+	s.client.CloseIdleConnections()
+	// Reset auth token
+	s.authToken = ""
+	return nil
+}

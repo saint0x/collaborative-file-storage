@@ -1,4 +1,4 @@
-package main
+package scripts
 
 import (
 	"context"
@@ -45,8 +45,6 @@ func main() {
 		os.Getenv("BACKBLAZE_KEY_ID"),
 		os.Getenv("BACKBLAZE_APPLICATION_KEY"),
 		os.Getenv("BACKBLAZE_BUCKET_NAME"),
-		os.Getenv("BACKBLAZE_ENDPOINT"),
-		os.Getenv("BACKBLAZE_REGION"),
 	)
 	if err != nil {
 		logError("Failed to initialize B2 service", err)

@@ -13,11 +13,12 @@ import (
 	"github.com/saint0x/file-storage-app/backend/internal/models"
 	"github.com/saint0x/file-storage-app/backend/internal/services/auth"
 	"github.com/saint0x/file-storage-app/backend/internal/services/storage"
+	"github.com/saint0x/file-storage-app/backend/internal/services/websocket"
 	"github.com/saint0x/file-storage-app/backend/pkg/errors"
 	"github.com/saint0x/file-storage-app/backend/pkg/utils"
 )
 
-func UploadFile(db *db.SQLiteClient, storageService *storage.B2Service) http.HandlerFunc {
+func UploadFile(b2Service *storage.B2Service, wsHub *websocket.Hub, dbClient *db.SQLiteClient) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, err := auth.GetUserIDFromContext(r.Context())
 		if err != nil {
@@ -34,7 +35,7 @@ func UploadFile(db *db.SQLiteClient, storageService *storage.B2Service) http.Han
 
 		key := fmt.Sprintf("%s_%d_%s", userID, time.Now().UnixNano(), header.Filename)
 
-		err = storageService.UploadFile(r.Context(), key, file)
+		err = b2Service.UploadFile(r.Context(), key, file)
 		if err != nil {
 			utils.RespondError(w, errors.InternalServerError("Failed to upload file"))
 			return
@@ -58,7 +59,7 @@ func UploadFile(db *db.SQLiteClient, storageService *storage.B2Service) http.Han
 			UpdatedAt:   time.Now(),
 		}
 
-		_, err = db.DB.Exec("INSERT INTO files (id, user_id, key, name, size, content_type, uploaded_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		_, err = dbClient.DB.Exec("INSERT INTO files (id, user_id, key, name, size, content_type, uploaded_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			newFile.ID, newFile.UserID, newFile.Key, newFile.Name, newFile.Size, newFile.ContentType, newFile.UploadedAt, newFile.CreatedAt, newFile.UpdatedAt)
 		if err != nil {
 			utils.RespondError(w, errors.InternalServerError("Failed to save file metadata"))
@@ -232,5 +233,11 @@ func GetOrganizedFileStructure(db *db.SQLiteClient) http.HandlerFunc {
 			return
 		}
 		utils.RespondJSON(w, http.StatusOK, structure)
+	}
+}
+
+func UpdateFile(db *db.SQLiteClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Implementation for updating file metadata
 	}
 }

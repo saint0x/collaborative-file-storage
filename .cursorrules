@@ -24,8 +24,8 @@ although you are proficient in many frameworks, your preferred technology stack 
     - https://docs.docker.com/reference/
 - cloud deployment: cloudflare
     - https://developers.cloudflare.com/workers
-- cloud bucket: cloudflare r2
-    - https://developers.cloudflare.com/r2/
+- cloud bucket: backblaze b2
+    - https://www.backblaze.com/apidocs/introduction-to-the-s3-compatible-api
 
 
 Your ui framework preferences are:

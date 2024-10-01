@@ -129,3 +129,9 @@ func (h *Hub) recordPing(clientID string) error {
 		ping.ID, ping.ClientID, ping.Timestamp)
 	return err
 }
+
+// Add this method to the Hub struct
+func (h *Hub) Stop() {
+	close(h.broadcast)
+	// Add any additional cleanup logic here
+}

@@ -1,0 +1,68 @@
+users:
+  - id: "user1"
+    email: "john@example.com"
+    username: "johndoe"
+    first_name: "John"
+    last_name: "Doe"
+  - id: "user2"
+    email: "jane@example.com"
+    username: "janedoe"
+    first_name: "Jane"
+    last_name: "Doe"
+
+friends:
+  - user_id: "user1"
+    friend_id: "user2"
+    status: "accepted"
+
+friend_contexts:
+  - user_id: "user1"
+    friend_id: "user2"
+    context: "Work colleague"
+
+friend_likes:
+  - user_id: "user1"
+    friend_id: "user2"
+
+collections:
+  - id: "collection1"
+    user_id: "user1"
+    name: "Work Documents"
+    description: "Important work-related files"
+
+folders:
+  - id: "folder1"
+    user_id: "user1"
+    name: "Projects"
+    description: "Current project files"
+    parent_id: null
+
+files:
+  - id: "file1"
+    user_id: "user1"
+    folder_id: "folder1"
+    collection_id: "collection1"
+    key: "projects/report.pdf"
+    name: "Q2 Report.pdf"
+    content_type: "application/pdf"
+    size: 1024000
+    uploaded_at: "2023-06-15T10:30:00Z"
+
+file_categories:
+  - name: "Documents"
+  - name: "Images"
+
+file_category_associations:
+  - file_id: "file1"
+    category_id: "Documents"
+
+shared_files:
+  - id: "shared1"
+    file_id: "file1"
+    shared_by: "user1"
+    shared_with: "user2"
+
+activity_log:
+  - user_id: "user1"
+    action_type: "file_upload"
+    action_details: "Uploaded Q2 Report.pdf"
