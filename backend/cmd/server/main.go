@@ -1,68 +1,102 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"io"
-	"log"
+	"net/http"
 	"os"
-	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/httprate"
+	"github.com/joho/godotenv"
+	"github.com/saint0x/file-storage-app/backend/internal/api"
+	apimiddleware "github.com/saint0x/file-storage-app/backend/internal/api/middleware"
+	"github.com/saint0x/file-storage-app/backend/internal/db"
+	"github.com/saint0x/file-storage-app/backend/internal/services/ai"
 	"github.com/saint0x/file-storage-app/backend/internal/services/auth"
 	"github.com/saint0x/file-storage-app/backend/internal/services/storage"
+	"github.com/saint0x/file-storage-app/backend/internal/services/websocket"
+	"github.com/saint0x/file-storage-app/backend/pkg/logger"
 )
 
 func main() {
+	// Initialize logger
+	logger := logger.NewLogger()
+
+	// Load configuration
 	if err := loadConfig(); err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		logger.Fatal("Failed to load configuration", "error", err)
 	}
 
-	ctx := context.Background()
+	// Initialize database
+	dbClient, err := db.NewSQLiteClient("file_storage.db")
+	if err != nil {
+		logger.Fatal("Failed to initialize database", "error", err)
+	}
+	defer dbClient.Close()
 
-	// Initialize auth service
+	// Initialize services
 	authService, err := auth.NewClerkService()
 	if err != nil {
-		log.Fatalf("Failed to initialize Clerk client: %v", err)
+		logger.Fatal("Failed to initialize Clerk service", "error", err)
 	}
 
-	// Validate token (for demonstration purposes)
-	token := os.Getenv("TEST_TOKEN")
-	userID, err := authService.ValidateAndExtractUserID(ctx, token)
-	if err != nil {
-		log.Fatalf("Token verification failed: %v", err)
-	}
-	log.Printf("Token verified for user: %s", userID)
-
-	// Initialize B2 service
 	b2Service, err := storage.NewB2Service(
-		os.Getenv("BACKBLAZE_KEY_ID"),
+		os.Getenv("BACKBLAZE_ACCOUNT_ID"),
 		os.Getenv("BACKBLAZE_APPLICATION_KEY"),
-		os.Getenv("BACKBLAZE_BUCKET_NAME"),
-		os.Getenv("BACKBLAZE_ENDPOINT"),
-		"us-east-001", // Hardcoded region
+		os.Getenv("BACKBLAZE_BUCKET_ID"),
 	)
 	if err != nil {
-		log.Fatalf("Failed to initialize B2 service: %v", err)
+		logger.Fatal("Failed to initialize B2 service", "error", err)
 	}
 
-	// Demonstrate B2Service functionality
-	if err := demonstrateB2Service(ctx, b2Service); err != nil {
-		log.Fatalf("B2 service demonstration failed: %v", err)
+	wsHub := websocket.NewHub(dbClient)
+
+	aiProcessor := ai.NewProcessor(os.Getenv("OPENAI_API_KEY"))
+
+	// Set up router
+	r := chi.NewRouter()
+
+	// Middleware
+	r.Use(apimiddleware.RequestLogger(logger))
+	r.Use(apimiddleware.Recoverer(logger))
+	r.Use(httprate.LimitByIP(60, 1*time.Minute)) // Rate limit: 60 requests per minute per IP
+
+	// Set up routes
+	api.SetupRoutes(r, dbClient, authService, b2Service, wsHub, aiProcessor)
+
+	// Start server
+	addr := ":8080"
+	logger.Info("Starting server", "address", addr)
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
-	if err := startServer(); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("Server failed", "error", err)
+		}
+	}()
+
+	// Graceful shutdown
+	waitForShutdown(server, logger)
 }
 
 func loadConfig() error {
+	err := godotenv.Load(".env.local")
+	if err != nil {
+		return fmt.Errorf("error loading .env.local file: %v", err)
+	}
+
 	requiredEnvVars := []string{
 		"CLERK_SECRET_KEY",
-		"BACKBLAZE_KEY_ID",
+		"BACKBLAZE_ACCOUNT_ID",
 		"BACKBLAZE_APPLICATION_KEY",
-		"BACKBLAZE_BUCKET_NAME",
-		"BACKBLAZE_ENDPOINT",
+		"BACKBLAZE_BUCKET_ID",
 	}
 
 	for _, envVar := range requiredEnvVars {
@@ -73,71 +107,6 @@ func loadConfig() error {
 	return nil
 }
 
-func startServer() error {
-	log.Println("Server starting...")
-	// TODO: Implement your server startup logic here
-	return nil
-}
-
-func demonstrateB2Service(ctx context.Context, b2Service *storage.B2Service) error {
-	// Create a new bucket
-	newBucketName := "test-bucket-" + time.Now().Format("20060102150405")
-	if err := b2Service.CreateBucket(ctx, newBucketName); err != nil {
-		return fmt.Errorf("failed to create bucket: %v", err)
-	}
-	log.Printf("Created new bucket: %s", newBucketName)
-
-	// Set bucket ACL to public-read
-	if err := b2Service.SetBucketACL(ctx, newBucketName, "public-read"); err != nil {
-		return fmt.Errorf("failed to set bucket ACL: %v", err)
-	}
-	log.Printf("Set bucket ACL to public-read: %s", newBucketName)
-
-	// Upload a test file
-	testContent := strings.NewReader("This is a test file content")
-	testKey := "test-file.txt"
-	if err := b2Service.UploadFile(ctx, testKey, testContent); err != nil {
-		return fmt.Errorf("failed to upload test file: %v", err)
-	}
-	log.Printf("Test file uploaded successfully: %s", testKey)
-
-	// List files
-	files, err := b2Service.ListFiles(ctx, "")
-	if err != nil {
-		return fmt.Errorf("failed to list files: %v", err)
-	}
-	log.Printf("Files in bucket: %v", files)
-
-	// Generate a signed URL
-	signedURL, err := b2Service.GetSignedURL(ctx, testKey, 1*time.Hour)
-	if err != nil {
-		return fmt.Errorf("failed to generate signed URL: %v", err)
-	}
-	log.Printf("Signed URL for test file: %s", signedURL)
-
-	// Download the test file
-	downloadedContent, err := b2Service.DownloadFile(ctx, testKey)
-	if err != nil {
-		return fmt.Errorf("failed to download test file: %v", err)
-	}
-	defer downloadedContent.Close()
-	content, err := io.ReadAll(downloadedContent)
-	if err != nil {
-		return fmt.Errorf("failed to read downloaded content: %v", err)
-	}
-	log.Printf("Downloaded file content: %s", string(content))
-
-	// Delete the test file
-	if err := b2Service.DeleteFile(ctx, testKey); err != nil {
-		return fmt.Errorf("failed to delete test file: %v", err)
-	}
-	log.Printf("Test file deleted successfully: %s", testKey)
-
-	// Delete the test bucket
-	if err := b2Service.DeleteBucket(ctx, newBucketName); err != nil {
-		return fmt.Errorf("failed to delete test bucket: %v", err)
-	}
-	log.Printf("Test bucket deleted successfully: %s", newBucketName)
-
-	return nil
+func waitForShutdown(server *http.Server, logger *logger.Logger) {
+	// ... (implementation of graceful shutdown)
 }

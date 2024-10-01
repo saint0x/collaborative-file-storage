@@ -12,8 +12,8 @@ import (
 )
 
 type ClerkService struct {
-	BaseURL    string
 	SecretKey  string
+	BaseURL    string
 	HTTPClient *http.Client
 }
 
@@ -33,23 +33,44 @@ func NewClerkService() (*ClerkService, error) {
 	if secretKey == "" {
 		return nil, fmt.Errorf("CLERK_SECRET_KEY is not set")
 	}
-
 	return &ClerkService{
-		BaseURL:   "https://api.clerk.com/v1",
-		SecretKey: secretKey,
-		HTTPClient: &http.Client{
-			Timeout: time.Second * 10,
-		},
+		SecretKey:  secretKey,
+		BaseURL:    "https://api.clerk.dev/v1",
+		HTTPClient: &http.Client{Timeout: 10 * time.Second},
 	}, nil
 }
 
 func (cs *ClerkService) ValidateAndExtractUserID(ctx context.Context, token string) (string, error) {
-	claims, err := cs.VerifyToken(token)
+	req, err := http.NewRequestWithContext(ctx, "GET", cs.BaseURL+"/tokens/verify", nil)
 	if err != nil {
 		return "", err
 	}
 
-	return claims.Subject, nil
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", cs.SecretKey))
+	q := req.URL.Query()
+	q.Add("token", token)
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := cs.HTTPClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to verify token: %s", resp.Status)
+	}
+
+	var claims struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&claims); err != nil {
+		return "", err
+	}
+
+	return claims.Data.ID, nil
 }
 
 func (cs *ClerkService) VerifyToken(token string) (*SessionClaims, error) {

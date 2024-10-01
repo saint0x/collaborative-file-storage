@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -22,8 +23,15 @@ const (
 )
 
 func main() {
+	// Get the absolute path to the project root
+	projectRoot, err := filepath.Abs("../..")
+	if err != nil {
+		logError("Failed to get project root path", err)
+		os.Exit(1)
+	}
+
 	// Load environment variables
-	if err := godotenv.Load("../../.env.local"); err != nil {
+	if err := godotenv.Load(filepath.Join(projectRoot, ".env.local")); err != nil {
 		logError("Error loading .env file", err)
 		os.Exit(1)
 	}
@@ -66,8 +74,14 @@ func ensureServerIsRunning() {
 }
 
 func uploadTestJSON(b2Service *storage.B2Service) error {
+	// Get the absolute path to the project root
+	projectRoot, err := filepath.Abs("../..")
+	if err != nil {
+		return fmt.Errorf("failed to get project root path: %v", err)
+	}
+
 	logInfo("Reading test.json file...")
-	jsonData, err := os.ReadFile("../../test.json")
+	jsonData, err := os.ReadFile(filepath.Join(projectRoot, "test.json"))
 	if err != nil {
 		return fmt.Errorf("failed to read test.json: %v", err)
 	}

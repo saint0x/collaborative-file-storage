@@ -7,14 +7,31 @@ import (
 )
 
 type File struct {
-	ID           uuid.UUID  `json:"id"`
-	UserID       uuid.UUID  `json:"user_id"`
-	CollectionID *uuid.UUID `json:"collection_id,omitempty"`
-	Key          string     `json:"key"`
-	Name         string     `json:"name"`
-	ContentType  string     `json:"content_type"`
-	Size         int64      `json:"size"`
-	UploadedAt   time.Time  `json:"uploaded_at"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	ID           uuid.UUID
+	UserID       uuid.UUID
+	Name         string
+	ContentType  string
+	Key          string
+	Size         int64
+	UploadedAt   time.Time
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	CollectionID uuid.UUID
+}
+
+type FileDetails struct {
+	File
+	Size           int64
+	UploadedAt     time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Collection     string
+	Folder         string
+	CollectionName string // Add this field
+	FolderName     string // Add this field
+}
+
+type FileStructure struct {
+	Folders map[string]Folder
+	Files   map[string][]File
 }

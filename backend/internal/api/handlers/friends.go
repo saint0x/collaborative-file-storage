@@ -10,6 +10,8 @@ import (
 	"github.com/saint0x/file-storage-app/backend/internal/db"
 	"github.com/saint0x/file-storage-app/backend/internal/models"
 	"github.com/saint0x/file-storage-app/backend/internal/services/auth"
+	"github.com/saint0x/file-storage-app/backend/pkg/errors"
+	"github.com/saint0x/file-storage-app/backend/pkg/utils"
 )
 
 func AddFriend(db *db.SQLiteClient) http.HandlerFunc {
@@ -130,5 +132,92 @@ func RemoveFriend(db *db.SQLiteClient) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Friend removed successfully"})
+	}
+}
+
+func GetFriendContexts(db *db.SQLiteClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		friendID := chi.URLParam(r, "id")
+		contexts, err := db.GetFriendContexts(friendID)
+		if err != nil {
+			utils.RespondError(w, errors.InternalServerError("Failed to fetch friend contexts"))
+			return
+		}
+		utils.RespondJSON(w, http.StatusOK, contexts)
+	}
+}
+
+func AddFriendContext(db *db.SQLiteClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, err := auth.GetUserIDFromContext(r.Context())
+		if err != nil {
+			utils.RespondError(w, errors.Unauthorized("User not authenticated"))
+			return
+		}
+
+		var req struct {
+			FriendID string `json:"friend_id"`
+			Context  string `json:"context"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			utils.RespondError(w, errors.BadRequest("Invalid request body"))
+			return
+		}
+		if err := db.AddFriendContext(userID, req.FriendID, req.Context); err != nil {
+			utils.RespondError(w, errors.InternalServerError("Failed to add friend context"))
+			return
+		}
+		utils.RespondJSON(w, http.StatusOK, map[string]string{"message": "Friend context added successfully"})
+	}
+}
+
+func RemoveFriendContext(db *db.SQLiteClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, err := auth.GetUserIDFromContext(r.Context())
+		if err != nil {
+			utils.RespondError(w, errors.Unauthorized("User not authenticated"))
+			return
+		}
+
+		var req struct {
+			FriendID string `json:"friend_id"`
+			Context  string `json:"context"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			utils.RespondError(w, errors.BadRequest("Invalid request body"))
+			return
+		}
+
+		err = db.RemoveFriendContext(userID, req.FriendID, req.Context)
+		if err != nil {
+			utils.RespondError(w, errors.InternalServerError("Failed to remove friend context"))
+			return
+		}
+
+		utils.RespondJSON(w, http.StatusOK, map[string]string{"message": "Friend context removed successfully"})
+	}
+}
+
+func LikeFriend(db *db.SQLiteClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		friendID := chi.URLParam(r, "id")
+		userID, _ := auth.GetUserIDFromContext(r.Context())
+		if err := db.LikeFriend(userID, friendID); err != nil {
+			utils.RespondError(w, errors.InternalServerError("Failed to like friend"))
+			return
+		}
+		utils.RespondJSON(w, http.StatusOK, map[string]string{"message": "Friend liked successfully"})
+	}
+}
+
+func UnlikeFriend(db *db.SQLiteClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		friendID := chi.URLParam(r, "id")
+		userID, _ := auth.GetUserIDFromContext(r.Context())
+		if err := db.UnlikeFriend(userID, friendID); err != nil {
+			utils.RespondError(w, errors.InternalServerError("Failed to unlike friend"))
+			return
+		}
+		utils.RespondJSON(w, http.StatusOK, map[string]string{"message": "Friend unliked successfully"})
 	}
 }

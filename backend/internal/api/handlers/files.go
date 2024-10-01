@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -48,10 +49,10 @@ func UploadFile(db *db.SQLiteClient, storageService *storage.B2Service) http.Han
 		newFile := models.File{
 			ID:          uuid.New(),
 			UserID:      userUUID,
-			Key:         key,
 			Name:        header.Filename,
-			Size:        header.Size,
 			ContentType: header.Header.Get("Content-Type"),
+			Key:         key,
+			Size:        header.Size,
 			UploadedAt:  time.Now(),
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
@@ -100,7 +101,7 @@ func GetFiles(db *db.SQLiteClient) http.HandlerFunc {
 			}
 			if collectionID.Valid {
 				collUUID, _ := uuid.Parse(collectionID.String)
-				f.CollectionID = &collUUID
+				f.CollectionID = collUUID
 			}
 			files = append(files, f)
 		}
@@ -153,5 +154,83 @@ func DeleteFile(db *db.SQLiteClient, storageService *storage.B2Service) http.Han
 		}
 
 		utils.RespondJSON(w, http.StatusOK, map[string]string{"message": "File deleted successfully"})
+	}
+}
+
+func GetFileCategories(db *db.SQLiteClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		categories, err := db.GetFileCategories()
+		if err != nil {
+			utils.RespondError(w, errors.InternalServerError("Failed to fetch file categories"))
+			return
+		}
+		utils.RespondJSON(w, http.StatusOK, categories)
+	}
+}
+
+func GetFilesByCategory(db *db.SQLiteClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		categoryName := chi.URLParam(r, "categoryName")
+		files, err := db.GetFilesByCategory(categoryName)
+		if err != nil {
+			utils.RespondError(w, errors.InternalServerError("Failed to fetch files by category"))
+			return
+		}
+		utils.RespondJSON(w, http.StatusOK, files)
+	}
+}
+
+func GetFileDetails(db *db.SQLiteClient, storageService *storage.B2Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fileID := chi.URLParam(r, "id")
+		details, err := db.GetFileDetails(fileID)
+		if err != nil {
+			utils.RespondError(w, errors.InternalServerError("Failed to fetch file details"))
+			return
+		}
+		// Add additional details from storage service if needed
+		utils.RespondJSON(w, http.StatusOK, details)
+	}
+}
+
+func ShareFileWithFriends(db *db.SQLiteClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fileID := chi.URLParam(r, "id")
+		var req struct {
+			FriendIDs []string `json:"friend_ids"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			utils.RespondError(w, errors.BadRequest("Invalid request body"))
+			return
+		}
+		if err := db.ShareFileWithFriends(fileID, req.FriendIDs); err != nil {
+			utils.RespondError(w, errors.InternalServerError("Failed to share file with friends"))
+			return
+		}
+		utils.RespondJSON(w, http.StatusOK, map[string]string{"message": "File shared successfully"})
+	}
+}
+
+func GetSharedWithMeFiles(db *db.SQLiteClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, _ := auth.GetUserIDFromContext(r.Context())
+		files, err := db.GetSharedWithMeFiles(userID)
+		if err != nil {
+			utils.RespondError(w, errors.InternalServerError("Failed to fetch shared files"))
+			return
+		}
+		utils.RespondJSON(w, http.StatusOK, files)
+	}
+}
+
+func GetOrganizedFileStructure(db *db.SQLiteClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, _ := auth.GetUserIDFromContext(r.Context())
+		structure, err := db.GetOrganizedFileStructure(userID)
+		if err != nil {
+			utils.RespondError(w, errors.InternalServerError("Failed to fetch organized file structure"))
+			return
+		}
+		utils.RespondJSON(w, http.StatusOK, structure)
 	}
 }
