@@ -34,6 +34,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.31.3 // indirect
 	github.com/aws/smithy-go v1.21.0 // indirect
 	github.com/google/uuid v1.6.0
+	github.com/saint0x/file-storage-app v0.0.0-20240930223331-eec343829340
 	gopkg.in/yaml.v2 v2.4.0
 )
 
