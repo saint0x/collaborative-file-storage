@@ -2,21 +2,20 @@ module github.com/saint0x/file-storage-app/backend
 
 go 1.21
 
-toolchain go1.23.1
-
 require (
 	github.com/aws/aws-sdk-go-v2 v1.31.0
-	github.com/aws/aws-sdk-go-v2/config v1.27.39
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.37
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.63.3
-	github.com/go-chi/chi/v5 v5.0.10
+	github.com/aws/aws-sdk-go-v2/config v1.18.25
+	github.com/aws/aws-sdk-go-v2/credentials v1.13.24
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.33.1
+	github.com/go-chi/chi/v5 v5.1.0
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
-	github.com/mattn/go-sqlite3 v1.14.17
+	github.com/mattn/go-sqlite3 v1.14.23
 	github.com/rs/cors v1.11.1
+	github.com/sashabaranov/go-openai v1.31.0
+	gopkg.in/yaml.v2 v2.4.0
 )
-
-require github.com/sashabaranov/go-openai v1.31.0
 
 require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.5 // indirect
@@ -33,9 +32,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.27.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.31.3 // indirect
 	github.com/aws/smithy-go v1.21.0 // indirect
-	github.com/google/uuid v1.6.0
-	github.com/saint0x/file-storage-app v0.0.0-20240930223331-eec343829340
-	gopkg.in/yaml.v2 v2.4.0
 )
 
 // Add any other necessary dependencies

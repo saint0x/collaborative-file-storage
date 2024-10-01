@@ -10,7 +10,7 @@ import (
 	"github.com/saint0x/file-storage-app/backend/internal/services/websocket"
 )
 
-func UploadFile(r2Service *storage.R2Service, hub *websocket.Hub) http.HandlerFunc {
+func UploadFile(b2Service *storage.B2Service, hub *websocket.Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		file, header, err := r.FormFile("file")
 		if err != nil {
@@ -22,7 +22,7 @@ func UploadFile(r2Service *storage.R2Service, hub *websocket.Hub) http.HandlerFu
 		// Generate a unique key for the file
 		key := fmt.Sprintf("%d_%s", time.Now().UnixNano(), header.Filename)
 
-		err = r2Service.UploadFile(r.Context(), key, file)
+		err = b2Service.UploadFile(r.Context(), key, file)
 		if err != nil {
 			http.Error(w, "Failed to upload file", http.StatusInternalServerError)
 			return

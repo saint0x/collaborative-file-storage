@@ -18,7 +18,7 @@ import (
 func SetupRoutes(
 	db *db.SQLiteClient,
 	authService *auth.ClerkService,
-	storageService *storage.R2Service,
+	storageService *storage.B2Service,
 	wsHub *websocket.Hub,
 	aiProcessor *ai.Processor,
 ) http.Handler {

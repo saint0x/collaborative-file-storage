@@ -3,9 +3,11 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -19,6 +21,12 @@ type SessionClaims struct {
 	Subject string `json:"sub"`
 	// Add other relevant claims as needed
 }
+
+type ContextKey string
+
+const (
+	UserIDContextKey ContextKey = "user_id"
+)
 
 func NewClerkService() (*ClerkService, error) {
 	secretKey := os.Getenv("CLERK_SECRET_KEY")
@@ -35,7 +43,6 @@ func NewClerkService() (*ClerkService, error) {
 	}, nil
 }
 
-// ValidateAndExtractUserID validates the token and extracts the user ID
 func (cs *ClerkService) ValidateAndExtractUserID(ctx context.Context, token string) (string, error) {
 	claims, err := cs.VerifyToken(token)
 	if err != nil {
@@ -45,7 +52,6 @@ func (cs *ClerkService) ValidateAndExtractUserID(ctx context.Context, token stri
 	return claims.Subject, nil
 }
 
-// VerifyToken verifies the token and returns the session claims
 func (cs *ClerkService) VerifyToken(token string) (*SessionClaims, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/tokens/verify", cs.BaseURL), nil)
 	if err != nil {
@@ -75,7 +81,6 @@ func (cs *ClerkService) VerifyToken(token string) (*SessionClaims, error) {
 	return &claims, nil
 }
 
-// GetUser retrieves a user by ID
 func (cs *ClerkService) GetUser(ctx context.Context, userID string) (map[string]interface{}, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/users/%s", cs.BaseURL, userID), nil)
 	if err != nil {
@@ -102,7 +107,6 @@ func (cs *ClerkService) GetUser(ctx context.Context, userID string) (map[string]
 	return user, nil
 }
 
-// ListUsers retrieves a list of users
 func (cs *ClerkService) ListUsers(ctx context.Context) ([]map[string]interface{}, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/users", cs.BaseURL), nil)
 	if err != nil {
@@ -127,4 +131,62 @@ func (cs *ClerkService) ListUsers(ctx context.Context) ([]map[string]interface{}
 	}
 
 	return users, nil
+}
+
+// GetUserIDFromContext retrieves the user ID from the context
+func GetUserIDFromContext(ctx context.Context) (string, error) {
+	userID, ok := ctx.Value(UserIDContextKey).(string)
+	if !ok {
+		return "", errors.New("user ID not found in context")
+	}
+	return userID, nil
+}
+
+// SetUserIDInContext sets the user ID in the context
+func SetUserIDInContext(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, UserIDContextKey, userID)
+}
+
+// ExtractBearerToken extracts the bearer token from the Authorization header
+func ExtractBearerToken(r *http.Request) (string, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return "", errors.New("missing Authorization header")
+	}
+
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return "", errors.New("invalid Authorization header format")
+	}
+
+	return parts[1], nil
+}
+
+// AuthenticateUser authenticates a user using the provided token
+func (cs *ClerkService) AuthenticateUser(ctx context.Context, token string) (context.Context, error) {
+	userID, err := cs.ValidateAndExtractUserID(ctx, token)
+	if err != nil {
+		return ctx, err
+	}
+
+	return SetUserIDInContext(ctx, userID), nil
+}
+
+// Middleware for authenticating requests
+func (cs *ClerkService) AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token, err := ExtractBearerToken(r)
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		ctx, err := cs.AuthenticateUser(r.Context(), token)
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }

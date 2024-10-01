@@ -16,7 +16,7 @@ import (
 	"github.com/saint0x/file-storage-app/backend/pkg/utils"
 )
 
-func UploadFile(db *db.SQLiteClient, storageService *storage.R2Service) http.HandlerFunc {
+func UploadFile(db *db.SQLiteClient, storageService *storage.B2Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, err := auth.GetUserIDFromContext(r.Context())
 		if err != nil {
@@ -124,7 +124,7 @@ func GetFiles(db *db.SQLiteClient) http.HandlerFunc {
 	}
 }
 
-func DeleteFile(db *db.SQLiteClient, storageService *storage.R2Service) http.HandlerFunc {
+func DeleteFile(db *db.SQLiteClient, storageService *storage.B2Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, err := auth.GetUserIDFromContext(r.Context())
 		if err != nil {
